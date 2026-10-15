@@ -252,15 +252,54 @@
         import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyD0NdOjUcDLTl4fxTwd67QrQrLLkGtxdBQ",
-            authDomain: "opening-88e14.firebaseapp.com",
-            projectId: "opening-88e14",
-            storageBucket: "opening-88e14.firebasestorage.app",
-            messagingSenderId: "498630978028",
-            appId: "1:498630978028:web:271d902b6e8398f30cf8c9",
-            measurementId: "G-W8DS3BKS3F"
+        // ============================================================
+        // ★ 사이트(도메인)별 Firebase 설정 ★
+        // - 접속한 주소(location.hostname)에 맞는 Firebase 프로젝트로 자동 연결됩니다.
+        // - 아래 "여기에 ... 입력" 부분을 새 Firebase 프로젝트 값으로 바꿔주세요.
+        // - 키(따옴표 안 주소)는 Vercel 배포 주소와 정확히 같아야 합니다. (https:// 와 / 는 빼고)
+        // ============================================================
+        const FIREBASE_CONFIGS = {
+            // ① 기존 사이트 (기존 Firebase 프로젝트: opening-88e14)
+            "여기에-기존-Vercel-주소.vercel.app": {
+                apiKey: "AIzaSyD0NdOjUcDLTl4fxTwd67QrQrLLkGtxdBQ",
+                authDomain: "opening-88e14.firebaseapp.com",
+                projectId: "opening-88e14",
+                storageBucket: "opening-88e14.firebasestorage.app",
+                messagingSenderId: "498630978028",
+                appId: "1:498630978028:web:271d902b6e8398f30cf8c9",
+                measurementId: "G-W8DS3BKS3F"
+            },
+
+            // ② 두 번째 사이트 (Firebase 프로젝트: family5-2)
+            "여기에-두번째-Vercel-주소.vercel.app": {
+               apiKey: "AIzaSyDvpBK43Rh8_0BD8vcxw-E7-7CEfUckTxU",
+  authDomain: "family5-2.firebaseapp.com",
+  projectId: "family5-2",
+  storageBucket: "family5-2.firebasestorage.app",
+  messagingSenderId: "210941029004",
+  appId: "1:210941029004:web:8702c3473d4919e5f6a9a9",
+  measurementId: "G-L93K40H86D"
+                // measurementId가 있으면 아래 줄 주석을 풀고 입력 (없어도 동작합니다)
+                // , measurementId: "여기에 measurementId 입력"
+            },
+
+            // ③ 세 번째 사이트 (세 번째 Firebase 프로젝트)
+            "여기에-세번째-Vercel-주소.vercel.app": {
+                apiKey: "AIzaSyCLdogHcaaaldPKGGKFvz2pQeZ-APNnyhM",
+  authDomain: "project-5370838033374528811.firebaseapp.com",
+  projectId: "project-5370838033374528811",
+  storageBucket: "project-5370838033374528811.firebasestorage.app",
+  messagingSenderId: "194880123609",
+  appId: "1:194880123609:web:86eb13e3aa4ad12353c4c8",
+  measurementId: "G-NKHQ4T25Q2"
+                // , measurementId: "여기에 measurementId 입력"
+            }
         };
+
+        // 어디에도 해당하지 않는 주소(예: localhost 테스트)로 접속하면 기존 Firebase를 사용
+        const DEFAULT_CONFIG_KEY = "여기에-기존-Vercel-주소.vercel.app";
+
+        const firebaseConfig = FIREBASE_CONFIGS[location.hostname] || FIREBASE_CONFIGS[DEFAULT_CONFIG_KEY];
         
         const COLLECTION_PATH = "family_memos"; // 저장소 폴더 이름
         
@@ -302,7 +341,9 @@
 
                 // Analytics는 광고차단/미지원 환경에서 실패할 수 있으므로 실패해도 앱은 계속 동작
                 try {
-                    analytics = getAnalytics(app);
+                    if (firebaseConfig.measurementId) {
+                        analytics = getAnalytics(app);
+                    }
                 } catch (analyticsErr) {
                     console.warn("Analytics 초기화 건너뜀:", analyticsErr);
                 }
