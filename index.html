@@ -1,3 +1,261 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>후회 없는 우리 가족</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Gowun Dodum', sans-serif;
+            background-color: #fdfbf7;
+            background-image: radial-gradient(#e5e5e5 1px, transparent 1px);
+            background-size: 20px 20px;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .header-bg {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 메모지 (포스트잇) 스타일 */
+        .memo-card {
+            background-color: #fff382; /* 기본 노란색 */
+            box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: grab;
+            position: relative;
+            transform: rotate(-2deg); 
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        
+        .memo-card:nth-child(even) { transform: rotate(2deg); background-color: #ffb7b2; }
+        .memo-card:nth-child(3n) { transform: rotate(-1deg); background-color: #e2f0cb; }
+        .memo-card:nth-child(4n) { transform: rotate(1deg); background-color: #c7ceea; }
+
+        .memo-card:hover {
+            transform: scale(1.05) translateY(-5px);
+            box-shadow: 4px 8px 15px rgba(0, 0, 0, 0.15);
+            z-index: 10;
+        }
+
+        .memo-card:active { cursor: grabbing; }
+
+        .memo-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 15px;
+            background-color: rgba(255, 255, 255, 0.4);
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        /* 스트리밍 등장 애니메이션 */
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.5) rotate(-10deg); }
+            100% { opacity: 1; }
+        }
+
+        /* 쓰레기통 스타일 */
+        .trash-bin {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .trash-bin.drag-over {
+            transform: scale(1.1);
+            filter: drop-shadow(0 0 15px rgba(255, 100, 100, 0.6));
+            border-color: #ff7675;
+        }
+
+        /* 불꽃놀이 (축하) 효과 */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            opacity: 0;
+        }
+
+        @keyframes explode {
+            0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) rotate(720deg); opacity: 0; }
+        }
+
+        /* 모달 스타일 */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        
+        .category-btn.active {
+            background-color: #ff7675;
+            color: white;
+            border-color: #ff7675;
+        }
+
+        .role-btn.active {
+            background-color: #6c5ce7;
+            color: white;
+            border-color: #6c5ce7;
+        }
+
+        /* 로딩 스피너 */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ff7675;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <header class="header-bg text-white py-6 px-4 md:px-8 flex justify-between items-center sticky top-0 z-40">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-2">
+                <i class="fa-solid fa-house-chimney-heart"></i>
+                우리가족 행복 프로젝트
+            </h1>
+            <p class="text-sm md:text-base mt-1 opacity-90 text-gray-800">우리가 함께 만드는 후회 없는 내일 (실시간 공유중)</p>
+        </div>
+        <button id="addMemoBtn" class="bg-white text-pink-500 hover:bg-pink-50 font-bold py-2 px-4 rounded-full shadow-md transition-colors flex items-center gap-2 text-sm md:text-base whitespace-nowrap">
+            <i class="fa-solid fa-plus"></i>
+            <span>다짐 적기</span>
+        </button>
+    </header>
+
+    <main class="flex-grow p-4 md:p-8 flex flex-col relative">
+        <div class="mb-6 text-center">
+            <h2 class="text-xl md:text-2xl font-bold text-gray-700 mb-2">활동 2: 가족을 위한 나의 실천 다짐</h2>
+            <p class="text-gray-600">만약 가족이 없어진다면... 후회하지 않기 위해 지금 할 수 있는 일은 무엇일까요?</p>
+            <p class="text-sm text-pink-500 font-bold mt-1 bg-pink-50 inline-block px-3 py-1 rounded-full"><i class="fa-solid fa-circle-info mr-1"></i>친구들과 부모님이 남긴 다짐이 실시간으로 나타납니다!</p>
+        </div>
+
+        <!-- 로딩 표시기 -->
+        <div id="loadingIndicator" class="absolute inset-0 flex flex-col items-center justify-center z-10 bg-[#fdfbf7] bg-opacity-80">
+            <div class="loader mb-4"></div>
+            <p class="text-gray-500 font-bold">친구들의 다짐을 불러오는 중...</p>
+        </div>
+
+        <!-- 메모가 붙는 보드 -->
+        <div id="memoBoard" class="flex-grow grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 auto-rows-max p-2 min-h-[50vh]">
+            <!-- 메모 카드들이 여기에 동적으로 렌더링 됩니다 -->
+        </div>
+    </main>
+
+    <div id="inputModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-[100] px-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform scale-95 transition-transform duration-300" id="modalContent">
+            <div class="bg-gradient-to-r from-pink-200 to-purple-200 px-6 py-4 flex justify-between items-center border-b border-pink-100">
+                <h3 class="text-xl font-bold text-gray-800">새로운 실천 다짐</h3>
+                <button id="closeModalBtn" class="text-gray-500 hover:text-gray-800 text-2xl leading-none">&times;</button>
+            </div>
+            
+            <div class="p-6">
+                <!-- 역할 선택 -->
+                <div class="mb-4 flex gap-4 border-b pb-4">
+                    <div class="flex-1">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">나는 누구인가요?</label>
+                        <div class="flex gap-2" id="roleTabs">
+                            <button class="role-btn active border border-gray-300 px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex-1 transition-colors font-bold" data-role="student">
+                                <i class="fa-solid fa-child mr-1"></i> 학생
+                            </button>
+                            <button class="role-btn border border-gray-300 px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex-1 transition-colors font-bold" data-role="parent">
+                                <i class="fa-solid fa-user-group mr-1"></i> 학부모
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 이름 입력 -->
+                <div class="mb-4">
+                    <label for="authorName" class="block text-sm font-bold text-gray-700 mb-2">이름 또는 애칭</label>
+                    <input type="text" id="authorName" maxlength="20" class="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200" placeholder="예: 홍길동, 지민이 엄마">
+                </div>
+
+                <!-- 카테고리 선택 -->
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">어떤 후회를 막고 싶나요?</label>
+                    <div class="flex flex-wrap gap-2" id="categoryTabs">
+                        <button class="category-btn active border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors" data-category="부모님을 더 많이 도와드릴걸">도와드릴걸</button>
+                        <button class="category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors" data-category="가족들에게 사랑을 표현할걸">사랑 표현할걸</button>
+                        <button class="category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors" data-category="가족들에게 상처주지 말걸">상처주지 말걸</button>
+                        <button class="category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors" data-category="가족들과 더 많은 시간 보낼걸">시간 보낼걸</button>
+                        
+                        <!-- 새로 추가된 추천 카테고리 3가지 -->
+                        <button class="category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors" data-category="고마운 마음을 자주 표현할걸">고맙다고 할걸</button>
+                        <button class="category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors" data-category="싸운 뒤에 먼저 사과할걸">먼저 사과할걸</button>
+                        <button class="category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors" data-category="가족과 추억을 더 남길걸">추억 남길걸</button>
+                    </div>
+                </div>
+                
+                <!-- 구체적 실천 내용 -->
+                <div class="mb-6">
+                    <label for="actionInput" class="block text-sm font-bold text-gray-700 mb-2">구체적으로 무엇을 실천할까요?</label>
+                    <textarea id="actionInput" rows="3" maxlength="200" class="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-200 resize-none" placeholder="예: 일주일에 한 번 설거지 도와드리기"></textarea>
+                </div>
+                
+                <button id="submitMemoBtn" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-colors text-lg flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-thumbtack"></i> 보드에 붙이기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 발표 모드 (포커스) 모달 -->
+    <div id="presentationModal" class="fixed inset-0 bg-gray-900 bg-opacity-80 backdrop-blur-sm hidden flex-col items-center justify-center z-[150] p-4 md:p-8 opacity-0 transition-opacity duration-300 overflow-y-auto">
+        <div class="w-full max-w-6xl flex justify-between items-center mb-8 mt-4 md:mt-0">
+            <h2 id="presentationTitle" class="text-3xl md:text-5xl font-bold text-white drop-shadow-md"><span class="text-pink-300">ㅇㅇㅇ</span> 님의 다짐</h2>
+            <button id="closePresentationBtn" class="text-white hover:text-pink-400 text-5xl leading-none transition-colors cursor-pointer">&times;</button>
+        </div>
+        <div id="presentationBoard" class="flex flex-wrap justify-center gap-8 md:gap-12 w-full pb-10">
+            <!-- 확대된 카드들이 여기에 렌더링 됩니다 -->
+        </div>
+        
+        <!-- 발표 모드 전용 쓰레기통 추가 -->
+        <div id="presentationTrashZone" class="w-full max-w-xl mx-auto mt-auto mb-8 p-6 border-4 border-dashed border-gray-500 hover:border-pink-400 rounded-2xl bg-gray-800 bg-opacity-70 flex flex-col items-center justify-center cursor-pointer transition-colors trash-bin">
+            <i class="fa-solid fa-trash-can text-5xl text-gray-400 mb-2 main-trash-icon transition-colors duration-300"></i>
+            <span class="text-xl font-bold text-gray-300">후회 쓰레기통</span>
+            <span class="text-sm text-gray-400 mt-1">발표를 마친 후, 카드를 여기로 끌어다 버려주세요!</span>
+        </div>
+
+        <p class="text-gray-300 text-lg text-center pb-8"><i class="fa-solid fa-lightbulb text-yellow-400 mr-2"></i>친구의 다짐을 다 함께 큰 소리로 읽고, 후회를 털어내 보세요!</p>
+    </div>
+
+    <!-- 토스트 메시지 -->
+    <div id="toastMessage" class="fixed top-24 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg transition-all duration-300 opacity-0 pointer-events-none z-[200] flex items-center gap-2 translate-y-4">
+        <i class="fa-solid fa-info-circle text-blue-400" id="toastIcon"></i>
+        <span id="toastText">메시지</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+
+        // ============================================================
+        // 사이트(도메인)별 Firebase 설정
+        // 접속한 주소(location.hostname)에 맞는 Firebase 프로젝트로 자동 연결됩니다.
+        // ============================================================
         const FIREBASE_CONFIGS = {
             // ① family-a (기존 Firebase 프로젝트: opening-88e14)
             "family-kab8lyi6b-yerim12.vercel.app": {
@@ -35,3 +293,511 @@
 
         // 어디에도 해당하지 않는 주소로 접속하면 기존 Firebase(family-a)를 사용
         const DEFAULT_CONFIG_KEY = "family-kab8lyi6b-yerim12.vercel.app";
+
+        const firebaseConfig = FIREBASE_CONFIGS[location.hostname] || FIREBASE_CONFIGS[DEFAULT_CONFIG_KEY];
+        
+        const COLLECTION_PATH = "family_memos"; // 저장소 폴더 이름
+        
+        // UI 요소
+        const addMemoBtn = document.getElementById('addMemoBtn');
+        const inputModal = document.getElementById('inputModal');
+        const modalContent = document.getElementById('modalContent');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const submitMemoBtn = document.getElementById('submitMemoBtn');
+        const actionInput = document.getElementById('actionInput');
+        const authorNameInput = document.getElementById('authorName');
+        const memoBoard = document.getElementById('memoBoard');
+        const categoryBtns = document.querySelectorAll('.category-btn');
+        const roleBtns = document.querySelectorAll('.role-btn');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const toastMessage = document.getElementById('toastMessage');
+        const toastText = document.getElementById('toastText');
+        const toastIcon = document.getElementById('toastIcon');
+
+        // 발표 모드 관련 요소
+        const presentationModal = document.getElementById('presentationModal');
+        const presentationTitle = document.getElementById('presentationTitle');
+        const presentationBoard = document.getElementById('presentationBoard');
+        const closePresentationBtn = document.getElementById('closePresentationBtn');
+        const presentationTrashZone = document.getElementById('presentationTrashZone');
+
+        let selectedCategory = '부모님을 더 많이 도와드릴걸';
+        let selectedRole = 'student'; // 'student' or 'parent'
+        let draggedElementId = null;
+        let globalMemosData = []; // 전체 메모 데이터를 저장하여 발표 모드에서 필터링 사용
+        
+        let db, auth, analytics;
+        let memosCollectionRef;
+
+        // Firebase 초기화 및 인증
+        async function initFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+
+                // Analytics는 광고차단/미지원 환경에서 실패할 수 있으므로 실패해도 앱은 계속 동작
+                try {
+                    if (firebaseConfig.measurementId) {
+                        analytics = getAnalytics(app);
+                    }
+                } catch (analyticsErr) {
+                    console.warn("Analytics 초기화 건너뜀:", analyticsErr);
+                }
+
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                memosCollectionRef = collection(db, COLLECTION_PATH);
+
+                // 익명 로그인
+                await signInAnonymously(auth);
+
+                // 인증 완료 후 실시간 리스너 시작
+                startRealtimeSync();
+
+            } catch (error) {
+                console.error("Firebase 초기화 에러:", error);
+                let msg = "Firebase 연결 실패! 설정값(firebaseConfig)을 확인해주세요.";
+                if (error.code === 'auth/operation-not-allowed') {
+                    msg = "Firebase 콘솔에서 '익명 로그인'을 사용 설정해주세요.";
+                } else if (error.code === 'auth/unauthorized-domain') {
+                    msg = "Firebase 승인된 도메인에 이 사이트 주소를 추가해주세요.";
+                }
+                showToast(msg, "error");
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        // 실시간 데이터 동기화
+        function startRealtimeSync() {
+            if (!auth.currentUser) return; // 인증 가드
+
+            // 복잡한 쿼리(orderBy 등) 없이 전체 데이터 가져오기
+            onSnapshot(memosCollectionRef, (snapshot) => {
+                loadingIndicator.style.display = 'none';
+                
+                const memosData = [];
+                snapshot.forEach((doc) => {
+                    memosData.push({ id: doc.id, ...doc.data() });
+                });
+
+                // 메모리 상에서 최신순 정렬
+                memosData.sort((a, b) => b.createdAt - a.createdAt);
+
+                globalMemosData = memosData; // 필터링을 위해 전역 변수에 저장
+
+                updateBoard(memosData);
+            }, (error) => {
+                console.error("Realtime sync error:", error);
+                loadingIndicator.style.display = 'none';
+                showToast(error.code === 'permission-denied'
+                    ? "Firestore 보안 규칙이 접근을 거부했습니다."
+                    : "실시간 연동이 끊어졌습니다.", "error");
+            });
+        }
+
+        // 보드 UI 업데이트 (드래그 중인 요소를 방해하지 않기 위해 스마트 업데이트)
+        function updateBoard(memosData) {
+            const currentMemos = Array.from(document.querySelectorAll('.memo-card'));
+            const dataIds = memosData.map(m => m.id);
+
+            // 1. 삭제된 데이터 UI에서 제거 (현재 던지고 있는 요소는 제외)
+            currentMemos.forEach(card => {
+                if (!dataIds.includes(card.dataset.id) && !card.classList.contains('throwing')) {
+                    card.remove();
+                }
+            });
+
+            // 2. 새로운 데이터 추가 또는 기존 데이터 위치 유지
+            // 전체를 다시 그리면 드래그가 취소되므로, 없는 것만 새로 만듭니다.
+            memosData.forEach((data, index) => {
+                let card = document.getElementById(`memo-${data.id}`);
+                
+                if (!card) {
+                    // 새 카드 생성
+                    card = createMemoElement(data);
+                    
+                    // 순서에 맞게 삽입 (최신순이므로 인덱스 기반으로 적절한 위치 찾기)
+                    if (index >= memoBoard.children.length) {
+                        memoBoard.appendChild(card);
+                    } else {
+                        memoBoard.insertBefore(card, memoBoard.children[index]);
+                    }
+                }
+            });
+        }
+
+        // 메모 DOM 요소 생성
+        function createMemoElement(data) {
+            const card = document.createElement('div');
+            card.id = `memo-${data.id}`;
+            card.className = 'memo-card p-4 md:p-5 rounded-lg flex flex-col justify-between cursor-pointer';
+            card.dataset.id = data.id;
+
+            // 역할에 따른 뱃지 스타일링
+            const isStudent = data.role === 'student';
+            const badgeClass = isStudent ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
+            const iconClass = isStudent ? 'fa-child' : 'fa-user-group';
+            
+            const authorText = data.authorName ? escapeHTML(data.authorName) : '익명';
+
+            card.innerHTML = `
+                <div>
+                    <div class="flex justify-between items-start mb-2 border-b border-gray-200 pb-2 gap-2">
+                        <span class="text-xs font-bold text-gray-500 break-words leading-tight flex-1">${escapeHTML(data.category)}</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${badgeClass}">
+                            <i class="fa-solid ${iconClass} mr-1"></i>${authorText}
+                        </span>
+                    </div>
+                    <p class="text-base md:text-lg font-bold mt-2 leading-snug break-words">${escapeHTML(data.text)}</p>
+                </div>
+                <div class="text-right mt-4 text-xs font-bold text-gray-500 select-none transition-colors hover:text-pink-500">
+                    <i class="fa-solid fa-hand-pointer animate-pulse"></i> 눌러서 발표하기
+                </div>
+            `;
+
+            // 카드 클릭 시 발표 모드 열기
+            card.addEventListener('click', () => {
+                if(card.classList.contains('throwing')) return;
+                openPresentation(data.authorName);
+            });
+
+            return card;
+        }
+
+        // UI 이벤트 바인딩
+        function setupUIEvents() {
+            // 모달 열기/닫기
+            addMemoBtn.addEventListener('click', () => {
+                if (!auth?.currentUser) {
+                    showToast('아직 서버에 연결되지 않았습니다. 잠시 후 다시 시도해주세요.', 'error');
+                    return;
+                }
+                inputModal.classList.remove('hidden');
+                setTimeout(() => {
+                    inputModal.classList.remove('opacity-0');
+                    modalContent.classList.remove('scale-95');
+                }, 10);
+                actionInput.value = '';
+                authorNameInput.value = '';
+                authorNameInput.focus();
+            });
+
+            const closeModal = () => {
+                inputModal.classList.add('opacity-0');
+                modalContent.classList.add('scale-95');
+                setTimeout(() => inputModal.classList.add('hidden'), 300);
+            };
+
+            closeModalBtn.addEventListener('click', closeModal);
+            inputModal.addEventListener('click', (e) => {
+                if (e.target === inputModal) closeModal();
+            });
+
+            // 탭 선택 이벤트
+            categoryBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    categoryBtns.forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    selectedCategory = e.target.dataset.category;
+                });
+            });
+
+            roleBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    roleBtns.forEach(b => b.classList.remove('active'));
+                    const target = e.currentTarget;
+                    target.classList.add('active');
+                    selectedRole = target.dataset.role;
+                });
+            });
+
+            // 다짐 DB에 저장
+            submitMemoBtn.addEventListener('click', async () => {
+                const actionText = actionInput.value.trim();
+                const authorName = authorNameInput.value.trim();
+                
+                if (!authorName) {
+                    showToast('이름이나 애칭을 적어주세요.', 'warning');
+                    authorNameInput.focus();
+                    return;
+                }
+
+                if (!actionText) {
+                    showToast('실천할 내용을 입력해주세요.', 'warning');
+                    actionInput.focus();
+                    return;
+                }
+
+                if (!auth?.currentUser) {
+                    showToast('서버에 연결되지 않았습니다. 잠시 후 다시 시도해주세요.', 'error');
+                    return;
+                }
+
+                // 버튼 비활성화로 중복 제출 방지
+                submitMemoBtn.disabled = true;
+                submitMemoBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 붙이는 중...';
+
+                try {
+                    await addDoc(memosCollectionRef, {
+                        category: selectedCategory,
+                        text: actionText,
+                        role: selectedRole,
+                        authorName: authorName,
+                        createdAt: Date.now()
+                    });
+                    
+                    closeModal();
+                    showToast('보드에 다짐을 붙였습니다!', 'success');
+                } catch (error) {
+                    console.error("저장 실패:", error);
+                    showToast('저장에 실패했습니다. 다시 시도해주세요.', 'error');
+                } finally {
+                    submitMemoBtn.disabled = false;
+                    submitMemoBtn.innerHTML = '<i class="fa-solid fa-thumbtack"></i> 보드에 붙이기';
+                }
+            });
+
+            // 발표 모드 전용 쓰레기통 드래그 이벤트
+            presentationTrashZone.addEventListener('dragover', (e) => {
+                e.preventDefault(); 
+                presentationTrashZone.classList.add('drag-over');
+                const icon = presentationTrashZone.querySelector('.main-trash-icon');
+                if(icon) {
+                    icon.classList.replace('fa-trash-can', 'fa-trash-can-arrow-up');
+                    icon.classList.add('text-pink-400');
+                }
+            });
+
+            presentationTrashZone.addEventListener('dragleave', () => resetTrashBinStyle(presentationTrashZone));
+
+            presentationTrashZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                resetTrashBinStyle(presentationTrashZone);
+                
+                if (draggedElementId) {
+                    // 모달 안의 보드에서 드래그된 카드 찾기
+                    const el = Array.from(presentationBoard.children).find(c => c.dataset.id === draggedElementId);
+                    if(el) throwAwayMemoFromPresentation(el, draggedElementId);
+                }
+            });
+
+            // 발표 모드 닫기 이벤트
+            closePresentationBtn.addEventListener('click', closePresentation);
+            presentationModal.addEventListener('click', (e) => {
+                if (e.target === presentationModal) closePresentation();
+            });
+        }
+
+        // 발표 모드 열기 함수
+        function openPresentation(authorName) {
+            if (!authorName) return;
+            
+            // 해당 작성자의 메모만 필터링
+            const authorMemos = globalMemosData.filter(m => m.authorName === authorName);
+            if (authorMemos.length === 0) return;
+
+            // 모달 제목 업데이트
+            presentationTitle.innerHTML = `<span class="text-pink-300 font-extrabold">${escapeHTML(authorName)}</span> 님의 다짐`;
+            
+            // 보드 초기화 및 확대된 카드 추가
+            presentationBoard.innerHTML = '';
+            
+            authorMemos.forEach((data, index) => {
+                const isStudent = data.role === 'student';
+                const badgeClass = isStudent ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
+                const iconClass = isStudent ? 'fa-child' : 'fa-user-group';
+                const authorText = data.authorName ? escapeHTML(data.authorName) : '익명';
+
+                const largeCard = document.createElement('div');
+                // 기존 포스트잇 색상 패턴 활용
+                const cardColors = ['#fff382', '#ffb7b2', '#e2f0cb', '#c7ceea'];
+                const bgColor = cardColors[index % 4];
+                const rotate = index % 2 === 0 ? 'rotate(-2deg)' : 'rotate(2deg)';
+                
+                largeCard.className = 'relative rounded-2xl p-8 md:p-10 flex flex-col shadow-2xl';
+                largeCard.style.backgroundColor = bgColor;
+                largeCard.style.transform = `${rotate} scale(1.05)`;
+                largeCard.style.width = '100%';
+                largeCard.style.maxWidth = '450px';
+                largeCard.style.minHeight = '300px';
+                largeCard.style.animation = `popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) ${index * 0.1}s forwards`;
+                largeCard.style.opacity = '0'; 
+
+                largeCard.innerHTML = `
+                    <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-10 bg-white bg-opacity-40 rounded-b-xl shadow-sm"></div>
+                    <div class="flex justify-between items-start mb-6 border-b-2 border-black border-opacity-10 pb-4 gap-4 mt-2">
+                        <span class="text-xl font-bold text-gray-600 break-words flex-1">${escapeHTML(data.category)}</span>
+                        <span class="text-lg font-bold px-4 py-1.5 rounded-full whitespace-nowrap ${badgeClass}">
+                            <i class="fa-solid ${iconClass} mr-2"></i>${authorText}
+                        </span>
+                    </div>
+                    <p class="text-3xl md:text-4xl font-bold mt-4 leading-normal break-words text-gray-800 flex-grow flex items-center justify-center text-center px-4 pb-4">${escapeHTML(data.text)}</p>
+                    <div class="absolute bottom-4 left-0 w-full text-center text-sm text-gray-500 opacity-60">
+                        <i class="fa-solid fa-hand-pointer mr-1"></i>아래 쓰레기통으로 드래그
+                    </div>
+                `;
+                
+                // 발표 모드 카드에 드래그 기능 추가
+                largeCard.draggable = true;
+                largeCard.dataset.id = data.id;
+                
+                largeCard.addEventListener('dragstart', (e) => {
+                    draggedElementId = data.id;
+                    setTimeout(() => largeCard.style.opacity = '0.4', 0);
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', data.id); 
+                });
+
+                largeCard.addEventListener('dragend', () => {
+                    largeCard.style.opacity = '1';
+                    draggedElementId = null;
+                    resetTrashBinStyle(presentationTrashZone);
+                });
+
+                presentationBoard.appendChild(largeCard);
+            });
+
+            // 모달 표시
+            presentationModal.classList.remove('hidden');
+            setTimeout(() => {
+                presentationModal.classList.remove('opacity-0');
+                presentationModal.classList.add('flex');
+            }, 10);
+        }
+
+        // 발표 모드 닫기 함수
+        function closePresentation() {
+            presentationModal.classList.add('opacity-0');
+            setTimeout(() => {
+                presentationModal.classList.add('hidden');
+                presentationModal.classList.remove('flex');
+            }, 300);
+        }
+
+        function resetTrashBinStyle(zone) {
+            if (!zone) return;
+            zone.classList.remove('drag-over');
+            const icon = zone.querySelector('.main-trash-icon');
+            if (icon) {
+                icon.classList.replace('fa-trash-can-arrow-up', 'fa-trash-can');
+                icon.classList.remove('text-pink-400');
+            }
+        }
+
+        // 발표 모드 전용 쓰레기통 애니메이션 및 삭제
+        function throwAwayMemoFromPresentation(element, docId) {
+            if (!auth?.currentUser) return;
+            if (element.classList.contains('throwing')) return; // 중복 삭제 방지
+            
+            element.classList.add('throwing');
+            
+            const rect = element.getBoundingClientRect();
+            const trashRect = presentationTrashZone.getBoundingClientRect();
+            
+            const clone = element.cloneNode(true);
+            clone.style.position = 'fixed';
+            clone.style.left = `${rect.left}px`;
+            clone.style.top = `${rect.top}px`;
+            clone.style.width = `${rect.width}px`;
+            clone.style.height = `${rect.height}px`;
+            clone.style.zIndex = '2000'; // 모달 위
+            clone.style.margin = '0';
+            clone.style.pointerEvents = 'none';
+            clone.style.opacity = '1';
+            
+            document.body.appendChild(clone);
+            element.style.visibility = 'hidden'; 
+            
+            const moveX = trashRect.left + (trashRect.width / 2) - (rect.left + rect.width / 2);
+            const moveY = trashRect.top + (trashRect.height / 2) - (rect.top + rect.height / 2);
+            
+            const animation = clone.animate([
+                { transform: 'translate(0, 0) scale(1) rotate(0)', opacity: 1 },
+                { transform: `translate(${moveX}px, ${moveY}px) scale(0.1) rotate(720deg)`, opacity: 0 }
+            ], {
+                duration: 600,
+                easing: 'cubic-bezier(0.25, 1, 0.5, 1)'
+            });
+
+            animation.onfinish = async () => {
+                clone.remove();
+                element.remove(); // 모달 보드에서 즉시 제거
+                
+                try {
+                    await deleteDoc(doc(db, COLLECTION_PATH, docId));
+                    createConfetti(trashRect); 
+                    showToast('훌륭해요! 과거의 후회를 날려버렸습니다!', 'success');
+                    
+                    // 해당 학생의 다짐을 모두 버렸으면 1.5초 후 자동으로 발표 모드 닫기
+                    if (presentationBoard.children.length === 0) {
+                        setTimeout(closePresentation, 1500);
+                    }
+                } catch(error) {
+                    console.error("삭제 실패:", error);
+                    element.style.visibility = 'visible';
+                    element.classList.remove('throwing');
+                    presentationBoard.appendChild(element); // 실패 시 복구
+                    showToast('삭제하지 못했습니다. 연결을 확인해주세요.', 'error');
+                }
+            };
+        }
+
+        // 파티클 (종이가루) 효과
+        function createConfetti(baseTrashRect) {
+            const colors = ['#ff7675', '#74b9ff', '#ffeaa7', '#55efc4', '#a29bfe'];
+            const trashRect = baseTrashRect;
+            
+            const centerX = trashRect ? trashRect.left + (trashRect.width / 2) : window.innerWidth / 2;
+            const centerY = trashRect ? trashRect.top + (trashRect.height / 2) : window.innerHeight / 2;
+
+            for (let i = 0; i < 40; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'confetti';
+                particle.style.position = 'fixed';
+                particle.style.zIndex = '9999';
+                particle.style.left = `${centerX}px`;
+                particle.style.top = `${centerY}px`;
+                particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                if (Math.random() > 0.5) particle.style.borderRadius = '50%';
+
+                const tx = (Math.random() - 0.5) * 400;
+                const ty = (Math.random() - 1) * 300; 
+                
+                particle.style.setProperty('--tx', `${tx}px`);
+                particle.style.setProperty('--ty', `${ty}px`);
+                particle.style.animation = `explode ${0.6 + Math.random() * 0.4}s forwards cubic-bezier(0.1, 0.8, 0.3, 1)`;
+
+                document.body.appendChild(particle);
+                setTimeout(() => particle.remove(), 1000);
+            }
+        }
+
+        let toastTimeout;
+        function showToast(message, type = 'info') {
+            toastText.textContent = message;
+            
+            toastIcon.className = 'fa-solid text-xl ';
+            if(type === 'success') toastIcon.className += 'fa-check-circle text-green-400';
+            else if(type === 'warning') toastIcon.className += 'fa-triangle-exclamation text-yellow-400';
+            else if(type === 'error') toastIcon.className += 'fa-circle-xmark text-red-400';
+            else toastIcon.className += 'fa-info-circle text-blue-400';
+
+            toastMessage.classList.remove('opacity-0', 'translate-y-4');
+            
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toastMessage.classList.add('opacity-0', 'translate-y-4');
+            }, 3000);
+        }
+
+        function escapeHTML(str) {
+            return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        // 실행
+        setupUIEvents();
+        initFirebase();
+    </script>
+</body>
+</html>
