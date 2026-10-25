@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <style>
         body {
             font-family: 'Gowun Dodum', sans-serif;
@@ -35,7 +35,7 @@
             transform: rotate(-2deg); 
             animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
-        
+
         .memo-card:nth-child(even) { transform: rotate(2deg); background-color: #ffb7b2; }
         .memo-card:nth-child(3n) { transform: rotate(-1deg); background-color: #e2f0cb; }
         .memo-card:nth-child(4n) { transform: rotate(1deg); background-color: #c7ceea; }
@@ -61,6 +61,11 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
+        /* 후회를 극복해서(쓰레기통에 던진 뒤) 실천 다짐만 남은 카드 스타일 */
+        .memo-card.memo-card-kept {
+            background-color: #d8f3dc !important;
+        }
+
         /* 스트리밍 등장 애니메이션 */
         @keyframes popIn {
             0% { opacity: 0; transform: scale(0.5) rotate(-10deg); }
@@ -73,7 +78,7 @@
             position: relative;
             overflow: hidden;
         }
-        
+
         .trash-bin.drag-over {
             transform: scale(1.1);
             filter: drop-shadow(0 0 15px rgba(255, 100, 100, 0.6));
@@ -99,11 +104,20 @@
             background-color: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(4px);
         }
-        
+
         .category-btn.active {
             background-color: #ff7675;
             color: white;
             border-color: #ff7675;
+        }
+
+        .category-btn-add {
+            background-color: transparent;
+        }
+
+        .category-btn-add:disabled,
+        #addMemoBtn:disabled {
+            cursor: not-allowed;
         }
 
         .role-btn.active {
@@ -136,6 +150,7 @@
                 우리가족 행복 프로젝트
             </h1>
             <p class="text-sm md:text-base mt-1 opacity-90 text-gray-800">우리가 함께 만드는 후회 없는 내일 (실시간 공유중)</p>
+            <p class="text-xs md:text-sm mt-1 opacity-80 text-gray-800"><i class="fa-regular fa-clock mr-1"></i>작성 가능 기간: 2026년 10월 26일 오전 11시까지</p>
         </div>
         <button id="addMemoBtn" class="bg-white text-pink-500 hover:bg-pink-50 font-bold py-2 px-4 rounded-full shadow-md transition-colors flex items-center gap-2 text-sm md:text-base whitespace-nowrap">
             <i class="fa-solid fa-plus"></i>
@@ -168,7 +183,7 @@
                 <h3 class="text-xl font-bold text-gray-800">새로운 실천 다짐</h3>
                 <button id="closeModalBtn" class="text-gray-500 hover:text-gray-800 text-2xl leading-none">&times;</button>
             </div>
-            
+
             <div class="p-6">
                 <!-- 역할 선택 -->
                 <div class="mb-4 flex gap-4 border-b pb-4">
@@ -189,6 +204,7 @@
                 <div class="mb-4">
                     <label for="authorName" class="block text-sm font-bold text-gray-700 mb-2">이름 또는 애칭</label>
                     <input type="text" id="authorName" maxlength="20" class="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200" placeholder="예: 홍길동, 지민이 엄마">
+                    <p class="text-xs text-gray-400 mt-1">* 다른 사람이 이미 사용한 이름은 쓸 수 없어요. (내가 전에 쓴 이름은 계속 사용 가능)</p>
                 </div>
 
                 <!-- 카테고리 선택 -->
@@ -199,20 +215,30 @@
                         <button class="category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors" data-category="가족들에게 사랑을 표현할걸">사랑 표현할걸</button>
                         <button class="category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors" data-category="가족들에게 상처주지 말걸">상처주지 말걸</button>
                         <button class="category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors" data-category="가족들과 더 많은 시간 보낼걸">시간 보낼걸</button>
-                        
+
                         <!-- 새로 추가된 추천 카테고리 3가지 -->
                         <button class="category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors" data-category="고마운 마음을 자주 표현할걸">고맙다고 할걸</button>
                         <button class="category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors" data-category="싸운 뒤에 먼저 사과할걸">먼저 사과할걸</button>
                         <button class="category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors" data-category="가족과 추억을 더 남길걸">추억 남길걸</button>
+
+                        <!-- 사용자가 직접 추가하는 카테고리가 여기 끝에 삽입됩니다 -->
+                        <button id="addCategoryBtn" type="button" class="category-btn-add border border-dashed border-purple-300 px-3 py-1.5 rounded-full text-sm text-purple-500 hover:bg-purple-50 transition-colors">
+                            <i class="fa-solid fa-plus mr-1"></i>직접 추가
+                        </button>
+                    </div>
+                    <div id="addCategoryForm" class="hidden mt-2 flex gap-2">
+                        <input type="text" id="newCategoryInput" maxlength="15" placeholder="새로운 후회 유형을 입력하세요" class="flex-1 px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200">
+                        <button id="confirmAddCategoryBtn" type="button" class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-bold px-3 py-1.5 rounded-lg whitespace-nowrap">추가</button>
+                        <button id="cancelAddCategoryBtn" type="button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-bold px-3 py-1.5 rounded-lg whitespace-nowrap">취소</button>
                     </div>
                 </div>
-                
+
                 <!-- 구체적 실천 내용 -->
                 <div class="mb-6">
                     <label for="actionInput" class="block text-sm font-bold text-gray-700 mb-2">구체적으로 무엇을 실천할까요?</label>
                     <textarea id="actionInput" rows="3" maxlength="200" class="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-200 resize-none" placeholder="예: 일주일에 한 번 설거지 도와드리기"></textarea>
                 </div>
-                
+
                 <button id="submitMemoBtn" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-colors text-lg flex justify-center items-center gap-2">
                     <i class="fa-solid fa-thumbtack"></i> 보드에 붙이기
                 </button>
@@ -229,12 +255,12 @@
         <div id="presentationBoard" class="flex flex-wrap justify-center gap-8 md:gap-12 w-full pb-10">
             <!-- 확대된 카드들이 여기에 렌더링 됩니다 -->
         </div>
-        
+
         <!-- 발표 모드 전용 쓰레기통 추가 -->
         <div id="presentationTrashZone" class="w-full max-w-xl mx-auto mt-auto mb-8 p-6 border-4 border-dashed border-gray-500 hover:border-pink-400 rounded-2xl bg-gray-800 bg-opacity-70 flex flex-col items-center justify-center cursor-pointer transition-colors trash-bin">
             <i class="fa-solid fa-trash-can text-5xl text-gray-400 mb-2 main-trash-icon transition-colors duration-300"></i>
             <span class="text-xl font-bold text-gray-300">후회 쓰레기통</span>
-            <span class="text-sm text-gray-400 mt-1">발표를 마친 후, 카드를 여기로 끌어다 버려주세요!</span>
+            <span class="text-sm text-gray-400 mt-1">"후회되는 마음"만 여기로 끌어다 버려주세요! 실천 다짐은 보드에 그대로 남아요.</span>
         </div>
 
         <p class="text-gray-300 text-lg text-center pb-8"><i class="fa-solid fa-lightbulb text-yellow-400 mr-2"></i>친구의 다짐을 다 함께 큰 소리로 읽고, 후회를 털어내 보세요!</p>
@@ -249,7 +275,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, updateDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
 
         // ============================================================
@@ -295,9 +321,34 @@
         const DEFAULT_CONFIG_KEY = "family-kab8lyi6b-yerim12.vercel.app";
 
         const firebaseConfig = FIREBASE_CONFIGS[location.hostname] || FIREBASE_CONFIGS[DEFAULT_CONFIG_KEY];
-        
+
         const COLLECTION_PATH = "family_memos"; // 저장소 폴더 이름
-        
+        const CATEGORY_COLLECTION_PATH = "family_custom_categories"; // 직접 추가한 카테고리 저장소
+
+        // ============================================================
+        // [선생님 설정] 작성 마감 시각
+        // 이 시각이 지나면 "다짐 적기" / "카테고리 직접 추가"가 자동으로 잠깁니다.
+        // 월(month)은 0부터 시작하므로 10월은 9로 적습니다. (연, 월, 일, 시, 분, 초)
+        // ============================================================
+        const SUBMISSION_DEADLINE = new Date(2026, 9, 26, 11, 0, 0);
+
+        // ============================================================
+        // [선생님 설정] 비속어 필터 목록
+        // 이름 / 다짐 내용 / 새 카테고리에 아래 단어가 포함되면 제출이 차단됩니다.
+        // 필요에 따라 자유롭게 단어를 추가하거나 삭제하세요.
+        // ============================================================
+        const BAD_WORDS = [
+            "씨발", "시발", "씨팔", "ㅅㅂ", "ㅆㅂ",
+            "개새끼", "개새기", "새끼야",
+            "병신", "ㅄ",
+            "지랄",
+            "미친놈", "미친년",
+            "꺼져", "닥쳐",
+            "존나", "존나게",
+            "걸레",
+            "fuck", "shit", "bitch"
+        ];
+
         // UI 요소
         const addMemoBtn = document.getElementById('addMemoBtn');
         const inputModal = document.getElementById('inputModal');
@@ -307,7 +358,12 @@
         const actionInput = document.getElementById('actionInput');
         const authorNameInput = document.getElementById('authorName');
         const memoBoard = document.getElementById('memoBoard');
-        const categoryBtns = document.querySelectorAll('.category-btn');
+        const categoryTabs = document.getElementById('categoryTabs');
+        const addCategoryBtn = document.getElementById('addCategoryBtn');
+        const addCategoryForm = document.getElementById('addCategoryForm');
+        const newCategoryInput = document.getElementById('newCategoryInput');
+        const confirmAddCategoryBtn = document.getElementById('confirmAddCategoryBtn');
+        const cancelAddCategoryBtn = document.getElementById('cancelAddCategoryBtn');
         const roleBtns = document.querySelectorAll('.role-btn');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const toastMessage = document.getElementById('toastMessage');
@@ -325,9 +381,67 @@
         let selectedRole = 'student'; // 'student' or 'parent'
         let draggedElementId = null;
         let globalMemosData = []; // 전체 메모 데이터를 저장하여 발표 모드에서 필터링 사용
-        
+
         let db, auth, analytics;
         let memosCollectionRef;
+        let customCategoriesRef;
+
+        // ------------------------------------------------------------
+        // 입력 마감 관련 함수
+        // ------------------------------------------------------------
+        function isSubmissionLocked() {
+            return Date.now() >= SUBMISSION_DEADLINE.getTime();
+        }
+
+        function updateLockUI() {
+            const locked = isSubmissionLocked();
+
+            if (locked) {
+                addMemoBtn.disabled = true;
+                addMemoBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                addMemoBtn.innerHTML = '<i class="fa-solid fa-lock"></i><span>작성 마감</span>';
+
+                addCategoryBtn.disabled = true;
+                addCategoryBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                addCategoryForm.classList.add('hidden');
+            }
+        }
+
+        // ------------------------------------------------------------
+        // 비속어 필터 함수
+        // ------------------------------------------------------------
+        function containsBadWord(str) {
+            if (!str) return false;
+            const normalized = str.replace(/\s+/g, '').toLowerCase();
+            return BAD_WORDS.some(word => normalized.includes(word.toLowerCase()));
+        }
+
+        // ------------------------------------------------------------
+        // 이름 중복 방지 함수 (localStorage 기반)
+        // 이 기기(브라우저)에서 이전에 사용한 이름은 계속 쓸 수 있고,
+        // 다른 사람이 이미 쓰고 있는(=내가 쓴 적 없는) 이름은 막습니다.
+        // ------------------------------------------------------------
+        function getMyNames() {
+            try {
+                return JSON.parse(localStorage.getItem('family_my_names') || '[]');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function addMyName(name) {
+            const names = getMyNames();
+            if (!names.includes(name)) {
+                names.push(name);
+                localStorage.setItem('family_my_names', JSON.stringify(names));
+            }
+        }
+
+        function isNameTakenByOther(name) {
+            const myNames = getMyNames();
+            if (myNames.includes(name)) return false;
+            return globalMemosData.some(m => m.authorName === name);
+        }
 
         // Firebase 초기화 및 인증
         async function initFirebase() {
@@ -347,12 +461,14 @@
                 db = getFirestore(app);
 
                 memosCollectionRef = collection(db, COLLECTION_PATH);
+                customCategoriesRef = collection(db, CATEGORY_COLLECTION_PATH);
 
                 // 익명 로그인
                 await signInAnonymously(auth);
 
                 // 인증 완료 후 실시간 리스너 시작
                 startRealtimeSync();
+                startCategorySync();
 
             } catch (error) {
                 console.error("Firebase 초기화 에러:", error);
@@ -374,7 +490,7 @@
             // 복잡한 쿼리(orderBy 등) 없이 전체 데이터 가져오기
             onSnapshot(memosCollectionRef, (snapshot) => {
                 loadingIndicator.style.display = 'none';
-                
+
                 const memosData = [];
                 snapshot.forEach((doc) => {
                     memosData.push({ id: doc.id, ...doc.data() });
@@ -395,55 +511,94 @@
             });
         }
 
+        // 직접 추가한 카테고리 실시간 동기화
+        function startCategorySync() {
+            if (!auth.currentUser) return;
+
+            onSnapshot(customCategoriesRef, (snapshot) => {
+                const cats = [];
+                snapshot.forEach((doc) => {
+                    cats.push({ id: doc.id, ...doc.data() });
+                });
+                cats.sort((a, b) => a.createdAt - b.createdAt);
+                renderCustomCategories(cats);
+            }, (error) => {
+                console.error("Category sync error:", error);
+            });
+        }
+
+        function renderCustomCategories(cats) {
+            // 기존에 그려둔 커스텀 카테고리 버튼 제거 후 다시 그리기
+            categoryTabs.querySelectorAll('.category-btn[data-custom="true"]').forEach(btn => btn.remove());
+
+            cats.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors';
+                btn.dataset.category = cat.label;
+                btn.dataset.custom = 'true';
+                btn.textContent = cat.label;
+                if (cat.label === selectedCategory) btn.classList.add('active');
+                categoryTabs.insertBefore(btn, addCategoryBtn);
+            });
+        }
+
         // 보드 UI 업데이트 (드래그 중인 요소를 방해하지 않기 위해 스마트 업데이트)
         function updateBoard(memosData) {
-            const currentMemos = Array.from(document.querySelectorAll('.memo-card'));
-            const dataIds = memosData.map(m => m.id);
+            const currentMemos = Array.from(memoBoard.querySelectorAll('.memo-card'));
+            const dataMap = new Map(memosData.map(m => [m.id, m]));
 
             // 1. 삭제된 데이터 UI에서 제거 (현재 던지고 있는 요소는 제외)
             currentMemos.forEach(card => {
-                if (!dataIds.includes(card.dataset.id) && !card.classList.contains('throwing')) {
+                if (!dataMap.has(card.dataset.id) && !card.classList.contains('throwing')) {
                     card.remove();
                 }
             });
 
-            // 2. 새로운 데이터 추가 또는 기존 데이터 위치 유지
-            // 전체를 다시 그리면 드래그가 취소되므로, 없는 것만 새로 만듭니다.
+            // 2. 새로운 데이터 추가, 기존 데이터는 변경(discarded 등) 시에만 다시 렌더링
             memosData.forEach((data, index) => {
                 let card = document.getElementById(`memo-${data.id}`);
-                
+
                 if (!card) {
                     // 새 카드 생성
                     card = createMemoElement(data);
-                    
+
                     // 순서에 맞게 삽입 (최신순이므로 인덱스 기반으로 적절한 위치 찾기)
                     if (index >= memoBoard.children.length) {
                         memoBoard.appendChild(card);
                     } else {
                         memoBoard.insertBefore(card, memoBoard.children[index]);
                     }
+                } else if (card.dataset.discarded !== String(!!data.discarded)) {
+                    // 후회 포기(쓰레기통에 버림) 상태가 바뀌면 내용만 다시 그림
+                    renderMemoCardContent(card, data);
+                    card.dataset.discarded = String(!!data.discarded);
                 }
             });
         }
 
-        // 메모 DOM 요소 생성
-        function createMemoElement(data) {
-            const card = document.createElement('div');
-            card.id = `memo-${data.id}`;
-            card.className = 'memo-card p-4 md:p-5 rounded-lg flex flex-col justify-between cursor-pointer';
-            card.dataset.id = data.id;
-
-            // 역할에 따른 뱃지 스타일링
+        // 메모 카드 내부 내용을 그리는 공통 함수 (신규 생성 / 갱신 공용)
+        function renderMemoCardContent(card, data) {
             const isStudent = data.role === 'student';
             const badgeClass = isStudent ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
             const iconClass = isStudent ? 'fa-child' : 'fa-user-group';
-            
             const authorText = data.authorName ? escapeHTML(data.authorName) : '익명';
+            const discarded = !!data.discarded;
+
+            card.className = 'memo-card p-4 md:p-5 rounded-lg flex flex-col justify-between cursor-pointer' + (discarded ? ' memo-card-kept' : '');
+
+            const topLineHTML = discarded
+                ? `<span class="text-xs font-bold text-green-600 break-words leading-tight flex-1"><i class="fa-solid fa-circle-check mr-1"></i>후회를 극복했어요!</span>`
+                : `<span class="text-xs font-bold text-gray-500 break-words leading-tight flex-1">${escapeHTML(data.category)}</span>`;
+
+            const bottomLineHTML = discarded
+                ? '<i class="fa-solid fa-star text-yellow-400"></i> 꾸준히 지켜볼게요!'
+                : '<i class="fa-solid fa-hand-pointer animate-pulse"></i> 눌러서 발표하기';
 
             card.innerHTML = `
                 <div>
                     <div class="flex justify-between items-start mb-2 border-b border-gray-200 pb-2 gap-2">
-                        <span class="text-xs font-bold text-gray-500 break-words leading-tight flex-1">${escapeHTML(data.category)}</span>
+                        ${topLineHTML}
                         <span class="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${badgeClass}">
                             <i class="fa-solid ${iconClass} mr-1"></i>${authorText}
                         </span>
@@ -451,13 +606,23 @@
                     <p class="text-base md:text-lg font-bold mt-2 leading-snug break-words">${escapeHTML(data.text)}</p>
                 </div>
                 <div class="text-right mt-4 text-xs font-bold text-gray-500 select-none transition-colors hover:text-pink-500">
-                    <i class="fa-solid fa-hand-pointer animate-pulse"></i> 눌러서 발표하기
+                    ${bottomLineHTML}
                 </div>
             `;
+        }
+
+        // 메모 DOM 요소 생성
+        function createMemoElement(data) {
+            const card = document.createElement('div');
+            card.id = `memo-${data.id}`;
+            card.dataset.id = data.id;
+
+            renderMemoCardContent(card, data);
+            card.dataset.discarded = String(!!data.discarded);
 
             // 카드 클릭 시 발표 모드 열기
             card.addEventListener('click', () => {
-                if(card.classList.contains('throwing')) return;
+                if (card.classList.contains('throwing')) return;
                 openPresentation(data.authorName);
             });
 
@@ -468,6 +633,10 @@
         function setupUIEvents() {
             // 모달 열기/닫기
             addMemoBtn.addEventListener('click', () => {
+                if (isSubmissionLocked()) {
+                    showToast('입력 가능 시간이 종료되어 더 이상 작성할 수 없습니다.', 'error');
+                    return;
+                }
                 if (!auth?.currentUser) {
                     showToast('아직 서버에 연결되지 않았습니다. 잠시 후 다시 시도해주세요.', 'error');
                     return;
@@ -479,6 +648,7 @@
                 }, 10);
                 actionInput.value = '';
                 authorNameInput.value = '';
+                addCategoryForm.classList.add('hidden');
                 authorNameInput.focus();
             });
 
@@ -493,15 +663,16 @@
                 if (e.target === inputModal) closeModal();
             });
 
-            // 탭 선택 이벤트
-            categoryBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    categoryBtns.forEach(b => b.classList.remove('active'));
-                    e.target.classList.add('active');
-                    selectedCategory = e.target.dataset.category;
-                });
+            // 카테고리 탭 선택 이벤트 (고정 카테고리 + 직접 추가한 카테고리 공용, 이벤트 위임 방식)
+            categoryTabs.addEventListener('click', (e) => {
+                const btn = e.target.closest('.category-btn');
+                if (!btn) return;
+                categoryTabs.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedCategory = btn.dataset.category;
             });
 
+            // 역할(학생/학부모) 탭 선택 이벤트
             roleBtns.forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     roleBtns.forEach(b => b.classList.remove('active'));
@@ -511,11 +682,73 @@
                 });
             });
 
+            // 카테고리 직접 추가 버튼 -> 입력창 토글
+            addCategoryBtn.addEventListener('click', () => {
+                if (isSubmissionLocked()) {
+                    showToast('입력 가능 시간이 종료되어 더 이상 카테고리를 추가할 수 없습니다.', 'error');
+                    return;
+                }
+                addCategoryForm.classList.toggle('hidden');
+                if (!addCategoryForm.classList.contains('hidden')) {
+                    newCategoryInput.value = '';
+                    newCategoryInput.focus();
+                }
+            });
+
+            cancelAddCategoryBtn.addEventListener('click', () => {
+                addCategoryForm.classList.add('hidden');
+            });
+
+            confirmAddCategoryBtn.addEventListener('click', async () => {
+                if (isSubmissionLocked()) {
+                    showToast('입력 가능 시간이 종료되어 더 이상 카테고리를 추가할 수 없습니다.', 'error');
+                    return;
+                }
+
+                const label = newCategoryInput.value.trim();
+
+                if (!label) {
+                    showToast('추가할 후회 유형을 입력해주세요.', 'warning');
+                    return;
+                }
+
+                if (containsBadWord(label)) {
+                    showToast('부적절한 표현이 포함되어 있어요. 다시 확인해주세요.', 'warning');
+                    return;
+                }
+
+                if (!auth?.currentUser) {
+                    showToast('서버에 연결되지 않았습니다. 잠시 후 다시 시도해주세요.', 'error');
+                    return;
+                }
+
+                confirmAddCategoryBtn.disabled = true;
+
+                try {
+                    await addDoc(customCategoriesRef, {
+                        label: label,
+                        createdAt: Date.now()
+                    });
+                    addCategoryForm.classList.add('hidden');
+                    showToast('새로운 후회 유형이 추가되었습니다!', 'success');
+                } catch (error) {
+                    console.error("카테고리 추가 실패:", error);
+                    showToast('카테고리 추가에 실패했습니다. 다시 시도해주세요.', 'error');
+                } finally {
+                    confirmAddCategoryBtn.disabled = false;
+                }
+            });
+
             // 다짐 DB에 저장
             submitMemoBtn.addEventListener('click', async () => {
                 const actionText = actionInput.value.trim();
                 const authorName = authorNameInput.value.trim();
-                
+
+                if (isSubmissionLocked()) {
+                    showToast('입력 가능 시간이 종료되어 더 이상 저장할 수 없습니다.', 'error');
+                    return;
+                }
+
                 if (!authorName) {
                     showToast('이름이나 애칭을 적어주세요.', 'warning');
                     authorNameInput.focus();
@@ -525,6 +758,17 @@
                 if (!actionText) {
                     showToast('실천할 내용을 입력해주세요.', 'warning');
                     actionInput.focus();
+                    return;
+                }
+
+                if (containsBadWord(authorName) || containsBadWord(actionText)) {
+                    showToast('이름이나 내용에 부적절한 표현이 포함되어 있어요. 다시 확인해주세요.', 'warning');
+                    return;
+                }
+
+                if (isNameTakenByOther(authorName)) {
+                    showToast('이미 다른 친구가 사용 중인 이름이에요. 다른 이름이나 애칭을 사용해주세요.', 'warning');
+                    authorNameInput.focus();
                     return;
                 }
 
@@ -543,9 +787,12 @@
                         text: actionText,
                         role: selectedRole,
                         authorName: authorName,
+                        discarded: false,
                         createdAt: Date.now()
                     });
-                    
+
+                    addMyName(authorName);
+
                     closeModal();
                     showToast('보드에 다짐을 붙였습니다!', 'success');
                 } catch (error) {
@@ -573,7 +820,7 @@
             presentationTrashZone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 resetTrashBinStyle(presentationTrashZone);
-                
+
                 if (draggedElementId) {
                     // 모달 안의 보드에서 드래그된 카드 찾기
                     const el = Array.from(presentationBoard.children).find(c => c.dataset.id === draggedElementId);
@@ -591,30 +838,31 @@
         // 발표 모드 열기 함수
         function openPresentation(authorName) {
             if (!authorName) return;
-            
+
             // 해당 작성자의 메모만 필터링
             const authorMemos = globalMemosData.filter(m => m.authorName === authorName);
             if (authorMemos.length === 0) return;
 
             // 모달 제목 업데이트
             presentationTitle.innerHTML = `<span class="text-pink-300 font-extrabold">${escapeHTML(authorName)}</span> 님의 다짐`;
-            
+
             // 보드 초기화 및 확대된 카드 추가
             presentationBoard.innerHTML = '';
-            
+
             authorMemos.forEach((data, index) => {
                 const isStudent = data.role === 'student';
                 const badgeClass = isStudent ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
                 const iconClass = isStudent ? 'fa-child' : 'fa-user-group';
                 const authorText = data.authorName ? escapeHTML(data.authorName) : '익명';
+                const discarded = !!data.discarded;
 
                 const largeCard = document.createElement('div');
                 // 기존 포스트잇 색상 패턴 활용
                 const cardColors = ['#fff382', '#ffb7b2', '#e2f0cb', '#c7ceea'];
-                const bgColor = cardColors[index % 4];
+                const bgColor = discarded ? '#d8f3dc' : cardColors[index % 4];
                 const rotate = index % 2 === 0 ? 'rotate(-2deg)' : 'rotate(2deg)';
-                
-                largeCard.className = 'relative rounded-2xl p-8 md:p-10 flex flex-col shadow-2xl';
+
+                largeCard.className = 'relative rounded-2xl p-8 md:p-10 flex flex-col shadow-2xl' + (discarded ? ' ring-4 ring-green-300' : '');
                 largeCard.style.backgroundColor = bgColor;
                 largeCard.style.transform = `${rotate} scale(1.05)`;
                 largeCard.style.width = '100%';
@@ -623,36 +871,49 @@
                 largeCard.style.animation = `popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) ${index * 0.1}s forwards`;
                 largeCard.style.opacity = '0'; 
 
+                const topLineHTML = discarded
+                    ? `<span class="text-xl font-bold text-green-600 break-words flex-1"><i class="fa-solid fa-circle-check mr-2"></i>후회 극복 완료</span>`
+                    : `<span class="text-xl font-bold text-gray-600 break-words flex-1">${escapeHTML(data.category)}</span>`;
+
+                const hintHTML = discarded
+                    ? '<i class="fa-solid fa-star text-yellow-400 mr-1"></i>이미 후회를 극복했어요! 이 실천 다짐은 계속 지켜가요.'
+                    : '<i class="fa-solid fa-hand-pointer mr-1"></i>"후회되는 마음"만 아래 쓰레기통으로 드래그';
+
                 largeCard.innerHTML = `
                     <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-10 bg-white bg-opacity-40 rounded-b-xl shadow-sm"></div>
                     <div class="flex justify-between items-start mb-6 border-b-2 border-black border-opacity-10 pb-4 gap-4 mt-2">
-                        <span class="text-xl font-bold text-gray-600 break-words flex-1">${escapeHTML(data.category)}</span>
+                        ${topLineHTML}
                         <span class="text-lg font-bold px-4 py-1.5 rounded-full whitespace-nowrap ${badgeClass}">
                             <i class="fa-solid ${iconClass} mr-2"></i>${authorText}
                         </span>
                     </div>
                     <p class="text-3xl md:text-4xl font-bold mt-4 leading-normal break-words text-gray-800 flex-grow flex items-center justify-center text-center px-4 pb-4">${escapeHTML(data.text)}</p>
                     <div class="absolute bottom-4 left-0 w-full text-center text-sm text-gray-500 opacity-60">
-                        <i class="fa-solid fa-hand-pointer mr-1"></i>아래 쓰레기통으로 드래그
+                        ${hintHTML}
                     </div>
                 `;
-                
-                // 발표 모드 카드에 드래그 기능 추가
-                largeCard.draggable = true;
-                largeCard.dataset.id = data.id;
-                
-                largeCard.addEventListener('dragstart', (e) => {
-                    draggedElementId = data.id;
-                    setTimeout(() => largeCard.style.opacity = '0.4', 0);
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', data.id); 
-                });
 
-                largeCard.addEventListener('dragend', () => {
-                    largeCard.style.opacity = '1';
-                    draggedElementId = null;
-                    resetTrashBinStyle(presentationTrashZone);
-                });
+                largeCard.dataset.id = data.id;
+
+                if (!discarded) {
+                    // 아직 버려지지 않은 "후회"가 있는 카드만 드래그로 버릴 수 있음
+                    largeCard.draggable = true;
+
+                    largeCard.addEventListener('dragstart', (e) => {
+                        draggedElementId = data.id;
+                        setTimeout(() => largeCard.style.opacity = '0.4', 0);
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', data.id); 
+                    });
+
+                    largeCard.addEventListener('dragend', () => {
+                        largeCard.style.opacity = '1';
+                        draggedElementId = null;
+                        resetTrashBinStyle(presentationTrashZone);
+                    });
+                } else {
+                    largeCard.draggable = false;
+                }
 
                 presentationBoard.appendChild(largeCard);
             });
@@ -684,16 +945,17 @@
             }
         }
 
-        // 발표 모드 전용 쓰레기통 애니메이션 및 삭제
+        // 발표 모드 전용 쓰레기통 애니메이션 및 "후회" 부분만 제거
+        // (실제 문서는 삭제하지 않고 discarded:true로 표시하여, 실천 다짐 문구는 보드에 계속 남습니다)
         function throwAwayMemoFromPresentation(element, docId) {
             if (!auth?.currentUser) return;
             if (element.classList.contains('throwing')) return; // 중복 삭제 방지
-            
+
             element.classList.add('throwing');
-            
+
             const rect = element.getBoundingClientRect();
             const trashRect = presentationTrashZone.getBoundingClientRect();
-            
+
             const clone = element.cloneNode(true);
             clone.style.position = 'fixed';
             clone.style.left = `${rect.left}px`;
@@ -704,13 +966,13 @@
             clone.style.margin = '0';
             clone.style.pointerEvents = 'none';
             clone.style.opacity = '1';
-            
+
             document.body.appendChild(clone);
             element.style.visibility = 'hidden'; 
-            
+
             const moveX = trashRect.left + (trashRect.width / 2) - (rect.left + rect.width / 2);
             const moveY = trashRect.top + (trashRect.height / 2) - (rect.top + rect.height / 2);
-            
+
             const animation = clone.animate([
                 { transform: 'translate(0, 0) scale(1) rotate(0)', opacity: 1 },
                 { transform: `translate(${moveX}px, ${moveY}px) scale(0.1) rotate(720deg)`, opacity: 0 }
@@ -721,23 +983,25 @@
 
             animation.onfinish = async () => {
                 clone.remove();
-                element.remove(); // 모달 보드에서 즉시 제거
-                
+                element.remove(); // 발표 보드에서는 제거 (후회를 버렸다는 의미)
+
                 try {
-                    await deleteDoc(doc(db, COLLECTION_PATH, docId));
+                    // 문서를 삭제하지 않고 discarded만 true로 표시
+                    // -> 메인 보드의 실천 다짐(text)은 그대로 남고, 후회 유형(category) 표시만 사라집니다.
+                    await updateDoc(doc(db, COLLECTION_PATH, docId), { discarded: true });
                     createConfetti(trashRect); 
-                    showToast('훌륭해요! 과거의 후회를 날려버렸습니다!', 'success');
-                    
-                    // 해당 학생의 다짐을 모두 버렸으면 1.5초 후 자동으로 발표 모드 닫기
+                    showToast('후회는 버리고, 실천 다짐은 계속 지켜가요!', 'success');
+
+                    // 해당 학생의 모든 후회를 버렸으면 1.5초 후 자동으로 발표 모드 닫기
                     if (presentationBoard.children.length === 0) {
                         setTimeout(closePresentation, 1500);
                     }
                 } catch(error) {
-                    console.error("삭제 실패:", error);
+                    console.error("처리 실패:", error);
                     element.style.visibility = 'visible';
                     element.classList.remove('throwing');
                     presentationBoard.appendChild(element); // 실패 시 복구
-                    showToast('삭제하지 못했습니다. 연결을 확인해주세요.', 'error');
+                    showToast('처리하지 못했습니다. 연결을 확인해주세요.', 'error');
                 }
             };
         }
@@ -746,7 +1010,7 @@
         function createConfetti(baseTrashRect) {
             const colors = ['#ff7675', '#74b9ff', '#ffeaa7', '#55efc4', '#a29bfe'];
             const trashRect = baseTrashRect;
-            
+
             const centerX = trashRect ? trashRect.left + (trashRect.width / 2) : window.innerWidth / 2;
             const centerY = trashRect ? trashRect.top + (trashRect.height / 2) : window.innerHeight / 2;
 
@@ -758,12 +1022,12 @@
                 particle.style.left = `${centerX}px`;
                 particle.style.top = `${centerY}px`;
                 particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                
+
                 if (Math.random() > 0.5) particle.style.borderRadius = '50%';
 
                 const tx = (Math.random() - 0.5) * 400;
                 const ty = (Math.random() - 1) * 300; 
-                
+
                 particle.style.setProperty('--tx', `${tx}px`);
                 particle.style.setProperty('--ty', `${ty}px`);
                 particle.style.animation = `explode ${0.6 + Math.random() * 0.4}s forwards cubic-bezier(0.1, 0.8, 0.3, 1)`;
@@ -776,7 +1040,7 @@
         let toastTimeout;
         function showToast(message, type = 'info') {
             toastText.textContent = message;
-            
+
             toastIcon.className = 'fa-solid text-xl ';
             if(type === 'success') toastIcon.className += 'fa-check-circle text-green-400';
             else if(type === 'warning') toastIcon.className += 'fa-triangle-exclamation text-yellow-400';
@@ -784,7 +1048,7 @@
             else toastIcon.className += 'fa-info-circle text-blue-400';
 
             toastMessage.classList.remove('opacity-0', 'translate-y-4');
-            
+
             clearTimeout(toastTimeout);
             toastTimeout = setTimeout(() => {
                 toastMessage.classList.add('opacity-0', 'translate-y-4');
@@ -798,6 +1062,8 @@
         // 실행
         setupUIEvents();
         initFirebase();
+        updateLockUI();
+        setInterval(updateLockUI, 15000); // 15초마다 마감 시각을 확인해 자동으로 잠깁니다.
     </script>
 </body>
 </html>
