@@ -366,7 +366,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, setDoc, updateDoc, deleteDoc, doc, onSnapshot, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
 
         // ============================================================
@@ -941,18 +941,26 @@
                         closeModal();
                         showToast('다짐이 수정되었습니다!', 'success');
                     } else {
-                        const newDocRef = await addDoc(memosCollectionRef, {
-                            category: selectedCategory,
-                            regretDetail: regretDetail,
-                            text: actionText,
-                            role: selectedRole,
-                            authorName: authorName,
-                            discarded: false,
-                            createdAt: Date.now()
-                        });
-
+                        // 문서 id를 먼저 만들어 '내 포스트잇'으로 기록한 뒤 저장합니다.
+                        // (저장 직후 화면이 먼저 그려져도 수정/삭제 버튼이 바로 나타나도록)
+                        const newDocRef = doc(memosCollectionRef);
                         addMyName(authorName);
                         addMyMemoId(newDocRef.id);
+
+                        try {
+                            await setDoc(newDocRef, {
+                                category: selectedCategory,
+                                regretDetail: regretDetail,
+                                text: actionText,
+                                role: selectedRole,
+                                authorName: authorName,
+                                discarded: false,
+                                createdAt: Date.now()
+                            });
+                        } catch (saveErr) {
+                            removeMyMemoId(newDocRef.id);
+                            throw saveErr;
+                        }
 
                         closeModal();
                         showToast('보드에 다짐을 붙였습니다!', 'success');
