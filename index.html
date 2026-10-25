@@ -165,6 +165,31 @@
             max-height: 70vh;
             overflow-y: auto;
         }
+
+        .memo-actions {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            display: flex;
+            gap: 4px;
+            z-index: 20;
+        }
+        .memo-actions button {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+            border: none;
+            cursor: pointer;
+            transition: transform 0.15s ease;
+        }
+        .memo-actions button:hover { transform: scale(1.15); }
+        .memo-edit-btn { background-color: #74b9ff; color: white; }
+        .memo-delete-btn { background-color: #ff7675; color: white; }
     </style>
 </head>
 <body class="text-gray-800">
@@ -225,7 +250,7 @@
     <div id="inputModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-[100] px-4 opacity-0 transition-opacity duration-300 overflow-y-auto">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform scale-95 transition-transform duration-300 my-8" id="modalContent">
             <div class="bg-gradient-to-r from-pink-200 to-purple-200 px-6 py-4 flex justify-between items-center border-b border-pink-100">
-                <h3 class="text-xl font-bold text-gray-800">새로운 실천 다짐</h3>
+                <h3 class="text-xl font-bold text-gray-800" id="modalTitleText">새로운 실천 다짐</h3>
                 <button id="closeModalBtn" class="text-gray-500 hover:text-gray-800 text-2xl leading-none">&times;</button>
             </div>
 
@@ -273,7 +298,7 @@
                 </div>
 
                 <button id="submitMemoBtn" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-colors text-lg flex justify-center items-center gap-2">
-                    <i class="fa-solid fa-thumbtack"></i> 보드에 붙이기
+                    <i class="fa-solid fa-thumbtack"></i> <span id="submitMemoBtnText">보드에 붙이기</span>
                 </button>
             </div>
         </div>
@@ -341,7 +366,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, updateDoc, doc, onSnapshot, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
 
         // ============================================================
@@ -408,8 +433,10 @@
         const resetAllBtn = document.getElementById('resetAllBtn');
         const inputModal = document.getElementById('inputModal');
         const modalContent = document.getElementById('modalContent');
+        const modalTitleText = document.getElementById('modalTitleText');
         const closeModalBtn = document.getElementById('closeModalBtn');
         const submitMemoBtn = document.getElementById('submitMemoBtn');
+        const submitMemoBtnText = document.getElementById('submitMemoBtnText');
         const actionInput = document.getElementById('actionInput');
         const regretDetailInput = document.getElementById('regretDetailInput');
         const authorNameInput = document.getElementById('authorName');
@@ -447,6 +474,7 @@
         let selectedRole = 'student';
         let draggedElementId = null;
         let globalMemosData = [];
+        let editingMemoId = null;
 
         let db, auth, analytics;
         let memosCollectionRef;
@@ -463,6 +491,27 @@
                 names.push(name);
                 localStorage.setItem(MY_NAMES_KEY, JSON.stringify(names));
             }
+        }
+
+        // 이 기기에서 작성한 메모 id 기록 (내 메모만 수정/삭제 가능하도록)
+        const MY_MEMO_IDS_KEY = 'family_my_memo_ids';
+        function getMyMemoIds() {
+            try { return JSON.parse(localStorage.getItem(MY_MEMO_IDS_KEY)) || []; }
+            catch (e) { return []; }
+        }
+        function addMyMemoId(id) {
+            const ids = getMyMemoIds();
+            if (!ids.includes(id)) {
+                ids.push(id);
+                localStorage.setItem(MY_MEMO_IDS_KEY, JSON.stringify(ids));
+            }
+        }
+        function removeMyMemoId(id) {
+            const ids = getMyMemoIds().filter(x => x !== id);
+            localStorage.setItem(MY_MEMO_IDS_KEY, JSON.stringify(ids));
+        }
+        function isOwnMemo(id) {
+            return getMyMemoIds().includes(id);
         }
 
         function isDeadlinePassed() {
@@ -618,7 +667,12 @@
             let topZoneHTML;
             if (data.discarded) {
                 topZoneHTML = '<div class="regret-zone torn-top opacity-70">' +
-                    '<span class="text-xs font-bold text-green-600"><i class="fa-solid fa-circle-check mr-1"></i>실천을 다짐했어요!</span>' +
+                    '<div class="flex justify-between items-center gap-2">' +
+                        '<span class="text-xs font-bold text-green-600"><i class="fa-solid fa-circle-check mr-1"></i>실천을 다짐했어요!</span>' +
+                        '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ' + badgeClass + '">' +
+                            '<i class="fa-solid ' + iconClass + ' mr-1"></i>' + authorText +
+                        '</span>' +
+                    '</div>' +
                     '</div>';
             } else {
                 topZoneHTML = '<div class="regret-zone">' +
@@ -633,7 +687,16 @@
                     '</div>';
             }
 
+            let actionsHTML = '';
+            if (isOwnMemo(data.id)) {
+                actionsHTML = '<div class="memo-actions">' +
+                    '<button type="button" class="memo-edit-btn" title="수정"><i class="fa-solid fa-pen"></i></button>' +
+                    '<button type="button" class="memo-delete-btn" title="삭제"><i class="fa-solid fa-trash"></i></button>' +
+                    '</div>';
+            }
+
             card.innerHTML =
+                actionsHTML +
                 '<div>' +
                     topZoneHTML +
                     '<p class="text-base md:text-lg font-bold mt-1 leading-snug break-words"><i class="fa-solid fa-thumbtack text-pink-400 mr-1"></i>' + escapeHTML(data.text) + '</p>' +
@@ -645,6 +708,19 @@
             card.addEventListener('click', () => {
                 openPresentation(data.authorName);
             });
+
+            if (isOwnMemo(data.id)) {
+                const editBtn = card.querySelector('.memo-edit-btn');
+                const deleteBtn = card.querySelector('.memo-delete-btn');
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openEditModal(data);
+                });
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    confirmDeleteMemo(data.id);
+                });
+            }
 
             return card;
         }
@@ -683,6 +759,76 @@
             return '<span class="text-sm font-bold px-3 py-1 rounded-full ' + cls + '"><i class="fa-solid ' + icon + ' mr-1"></i>' + escapeHTML(p.name) + '</span>';
         }
 
+        function openAddModal() {
+            editingMemoId = null;
+            modalTitleText.textContent = '새로운 실천 다짐';
+            submitMemoBtnText.textContent = '보드에 붙이기';
+
+            inputModal.classList.remove('hidden');
+            setTimeout(() => {
+                inputModal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+
+            actionInput.value = '';
+            regretDetailInput.value = '';
+            authorNameInput.value = '';
+            selectedCategory = '부모님을 더 많이 도와드릴걸';
+            selectedRole = 'student';
+            roleBtns.forEach(b => b.classList.toggle('active', b.dataset.role === 'student'));
+            categoryBtnsContainer.querySelectorAll('.category-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.category === selectedCategory);
+            });
+            authorNameInput.focus();
+        }
+
+        function openEditModal(data) {
+            editingMemoId = data.id;
+            modalTitleText.textContent = '다짐 수정하기';
+            submitMemoBtnText.textContent = '수정 완료';
+
+            inputModal.classList.remove('hidden');
+            setTimeout(() => {
+                inputModal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+
+            authorNameInput.value = data.authorName || '';
+            regretDetailInput.value = data.regretDetail || '';
+            actionInput.value = data.text || '';
+
+            selectedRole = data.role === 'parent' ? 'parent' : 'student';
+            roleBtns.forEach(b => b.classList.toggle('active', b.dataset.role === selectedRole));
+
+            selectedCategory = data.category || '부모님을 더 많이 도와드릴걸';
+            let matched = false;
+            categoryBtnsContainer.querySelectorAll('.category-btn').forEach(b => {
+                const isMatch = b.dataset.category === selectedCategory;
+                b.classList.toggle('active', isMatch);
+                if (isMatch) matched = true;
+            });
+            if (!matched) {
+                const firstBtn = categoryBtnsContainer.querySelector('.category-btn');
+                firstBtn.classList.add('active');
+                selectedCategory = firstBtn.dataset.category;
+            }
+        }
+
+        function confirmDeleteMemo(id) {
+            const sure = window.confirm('이 포스트잇을 삭제할까요? 이 작업은 되돌릴 수 없습니다.');
+            if (!sure) return;
+
+            deleteDoc(doc(db, COLLECTION_PATH, id))
+                .then(() => {
+                    removeMyMemoId(id);
+                    showToast('포스트잇을 삭제했습니다.', 'success');
+                })
+                .catch((error) => {
+                    console.error('삭제 실패:', error);
+                    showToast('삭제에 실패했습니다. 연결을 확인해주세요.', 'error');
+                });
+        }
+
         function setupUIEvents() {
             addMemoBtn.addEventListener('click', () => {
                 if (isDeadlinePassed()) {
@@ -693,15 +839,7 @@
                     showToast('아직 서버에 연결되지 않았습니다. 잠시 후 다시 시도해주세요.', 'error');
                     return;
                 }
-                inputModal.classList.remove('hidden');
-                setTimeout(() => {
-                    inputModal.classList.remove('opacity-0');
-                    modalContent.classList.remove('scale-95');
-                }, 10);
-                actionInput.value = '';
-                regretDetailInput.value = '';
-                authorNameInput.value = '';
-                authorNameInput.focus();
+                openAddModal();
             });
 
             const closeModal = () => {
@@ -727,7 +865,9 @@
             });
 
             submitMemoBtn.addEventListener('click', async () => {
-                if (isDeadlinePassed()) {
+                const isEditing = !!editingMemoId;
+
+                if (!isEditing && isDeadlinePassed()) {
                     showToast('작성 가능한 시간이 지났습니다.', 'warning');
                     return;
                 }
@@ -748,7 +888,7 @@
                 }
 
                 const myNames = getMyNames();
-                const nameUsedByOthers = globalMemosData.some(m => m.authorName === authorName) && !myNames.includes(authorName);
+                const nameUsedByOthers = globalMemosData.some(m => m.authorName === authorName && m.id !== editingMemoId) && !myNames.includes(authorName);
                 if (nameUsedByOthers) {
                     showToast('이미 다른 친구가 사용 중인 이름이에요. 다른 이름을 적어주세요.', 'warning');
                     authorNameInput.focus();
@@ -783,29 +923,43 @@
                 }
 
                 submitMemoBtn.disabled = true;
-                submitMemoBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 붙이는 중...';
+                submitMemoBtnText.textContent = isEditing ? '수정 중...' : '붙이는 중...';
 
                 try {
-                    await addDoc(memosCollectionRef, {
-                        category: selectedCategory,
-                        regretDetail: regretDetail,
-                        text: actionText,
-                        role: selectedRole,
-                        authorName: authorName,
-                        discarded: false,
-                        createdAt: Date.now()
-                    });
+                    if (isEditing) {
+                        await updateDoc(doc(db, COLLECTION_PATH, editingMemoId), {
+                            category: selectedCategory,
+                            regretDetail: regretDetail,
+                            text: actionText,
+                            role: selectedRole,
+                            authorName: authorName
+                        });
+                        addMyName(authorName);
+                        closeModal();
+                        showToast('다짐이 수정되었습니다!', 'success');
+                    } else {
+                        const newDocRef = await addDoc(memosCollectionRef, {
+                            category: selectedCategory,
+                            regretDetail: regretDetail,
+                            text: actionText,
+                            role: selectedRole,
+                            authorName: authorName,
+                            discarded: false,
+                            createdAt: Date.now()
+                        });
 
-                    addMyName(authorName);
+                        addMyName(authorName);
+                        addMyMemoId(newDocRef.id);
 
-                    closeModal();
-                    showToast('보드에 다짐을 붙였습니다!', 'success');
+                        closeModal();
+                        showToast('보드에 다짐을 붙였습니다!', 'success');
+                    }
                 } catch (error) {
                     console.error("저장 실패:", error);
                     showToast('저장에 실패했습니다. 다시 시도해주세요.', 'error');
                 } finally {
                     submitMemoBtn.disabled = false;
-                    submitMemoBtn.innerHTML = '<i class="fa-solid fa-thumbtack"></i> 보드에 붙이기';
+                    submitMemoBtnText.textContent = isEditing ? '수정 완료' : '보드에 붙이기';
                 }
             });
 
@@ -942,7 +1096,12 @@
                 let topSectionHTML;
                 if (data.discarded) {
                     topSectionHTML = '<div class="relative torn-top opacity-70 pb-6 mb-6">' +
-                        '<span class="text-xl font-bold text-green-600"><i class="fa-solid fa-circle-check mr-2"></i>실천을 다짐했어요!</span>' +
+                        '<div class="flex justify-between items-center gap-4">' +
+                            '<span class="text-xl font-bold text-green-600"><i class="fa-solid fa-circle-check mr-2"></i>실천을 다짐했어요!</span>' +
+                            '<span class="text-lg font-bold px-4 py-1.5 rounded-full whitespace-nowrap ' + badgeClass + '">' +
+                                '<i class="fa-solid ' + iconClass + ' mr-2"></i>' + authorText +
+                            '</span>' +
+                        '</div>' +
                         '</div>';
                 } else {
                     topSectionHTML =
@@ -1046,9 +1205,19 @@
 
                 const parentCard = regretEl.closest('[data-memo-id]');
                 if (parentCard) {
+                    const memoData = globalMemosData.find(m => m.id === docId) || {};
+                    const isStudent = memoData.role === 'student';
+                    const badgeClass = isStudent ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
+                    const iconClass = isStudent ? 'fa-child' : 'fa-user-group';
+                    const authorText = memoData.authorName ? escapeHTML(memoData.authorName) : '익명';
                     parentCard.querySelector('.mt-4').innerHTML =
                         '<div class="relative torn-top opacity-70 pb-6 mb-6">' +
-                        '<span class="text-xl font-bold text-green-600"><i class="fa-solid fa-circle-check mr-2"></i>실천을 다짐했어요!</span>' +
+                        '<div class="flex justify-between items-center gap-4">' +
+                            '<span class="text-xl font-bold text-green-600"><i class="fa-solid fa-circle-check mr-2"></i>실천을 다짐했어요!</span>' +
+                            '<span class="text-lg font-bold px-4 py-1.5 rounded-full whitespace-nowrap ' + badgeClass + '">' +
+                                '<i class="fa-solid ' + iconClass + ' mr-2"></i>' + authorText +
+                            '</span>' +
+                        '</div>' +
                         '</div>';
                 }
 
