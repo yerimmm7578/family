@@ -260,14 +260,6 @@
                         <button class="category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors" data-category="싸운 뒤에 먼저 사과할걸">먼저 사과할걸</button>
                         <button class="category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors" data-category="가족과 추억을 더 남길걸">추억 남길걸</button>
                     </div>
-                    <div id="customCategoryContainer" class="flex flex-wrap gap-2 mt-2"></div>
-                    <button id="addCategoryBtn" type="button" class="mt-2 text-sm text-purple-600 font-bold border border-dashed border-purple-300 px-3 py-1.5 rounded-full hover:bg-purple-50 transition-colors">
-                        <i class="fa-solid fa-plus mr-1"></i>직접 추가
-                    </button>
-                    <div id="newCategoryInputWrap" class="hidden mt-2 flex gap-2">
-                        <input type="text" id="newCategoryInput" maxlength="20" class="flex-1 px-3 py-2 text-sm text-gray-700 border rounded-lg focus:outline-none focus:border-purple-500" placeholder="새 후회 유형 입력">
-                        <button id="confirmAddCategoryBtn" type="button" class="bg-purple-500 hover:bg-purple-600 text-white font-bold px-4 rounded-lg text-sm">추가</button>
-                    </div>
                 </div>
 
                 <div class="mb-4">
@@ -391,7 +383,6 @@
         const firebaseConfig = FIREBASE_CONFIGS[location.hostname] || FIREBASE_CONFIGS[DEFAULT_CONFIG_KEY];
 
         const COLLECTION_PATH = "family_memos";
-        const CATEGORY_COLLECTION_PATH = "family_categories";
 
         // 작성 마감 시각: 한국시간(KST, UTC+9) 2026-10-26 11:00 = UTC 2026-10-26 02:00
         const DEADLINE_MS = new Date('2026-10-26T02:00:00Z').getTime();
@@ -427,18 +418,12 @@
         const waitingCount = document.getElementById('waitingCount');
         const doneCount = document.getElementById('doneCount');
         const categoryBtnsContainer = document.getElementById('categoryTabs');
-        const customCategoryContainer = document.getElementById('customCategoryContainer');
         const roleBtns = document.querySelectorAll('.role-btn');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const toastMessage = document.getElementById('toastMessage');
         const toastText = document.getElementById('toastText');
         const toastIcon = document.getElementById('toastIcon');
         const deadlineNotice = document.getElementById('deadlineNotice');
-
-        const addCategoryBtn = document.getElementById('addCategoryBtn');
-        const newCategoryInputWrap = document.getElementById('newCategoryInputWrap');
-        const newCategoryInput = document.getElementById('newCategoryInput');
-        const confirmAddCategoryBtn = document.getElementById('confirmAddCategoryBtn');
 
         const presentationModal = document.getElementById('presentationModal');
         const presentationTitle = document.getElementById('presentationTitle');
@@ -462,10 +447,9 @@
         let selectedRole = 'student';
         let draggedElementId = null;
         let globalMemosData = [];
-        let globalCategoriesData = [];
 
         let db, auth, analytics;
-        let memosCollectionRef, categoriesCollectionRef;
+        let memosCollectionRef;
 
         // 이 기기에서 사용한 이름 기록 (이름 중복 방지용)
         const MY_NAMES_KEY = 'family_my_names';
@@ -495,14 +479,10 @@
                 deadlineNotice.innerHTML = '<i class="fa-solid fa-lock mr-1"></i>작성이 마감되었습니다 (' + formatDeadline() + ')';
                 addMemoBtn.classList.add('locked-btn');
                 addMemoBtn.disabled = true;
-                addCategoryBtn.classList.add('locked-btn');
-                addCategoryBtn.disabled = true;
             } else {
                 deadlineNotice.innerHTML = '<i class="fa-solid fa-clock mr-1"></i>작성 가능 기간: ' + formatDeadline() + '까지';
                 addMemoBtn.classList.remove('locked-btn');
                 addMemoBtn.disabled = false;
-                addCategoryBtn.classList.remove('locked-btn');
-                addCategoryBtn.disabled = false;
             }
         }
         updateLockUI();
@@ -523,12 +503,10 @@
                 db = getFirestore(app);
 
                 memosCollectionRef = collection(db, COLLECTION_PATH);
-                categoriesCollectionRef = collection(db, CATEGORY_COLLECTION_PATH);
 
                 await signInAnonymously(auth);
 
                 startRealtimeSync();
-                startCategorySync();
 
             } catch (error) {
                 console.error("Firebase 초기화 에러:", error);
@@ -565,30 +543,6 @@
                 showToast(error.code === 'permission-denied'
                     ? "Firestore 보안 규칙이 접근을 거부했습니다."
                     : "실시간 연동이 끊어졌습니다.", "error");
-            });
-        }
-
-        function startCategorySync() {
-            onSnapshot(categoriesCollectionRef, (snapshot) => {
-                const cats = [];
-                snapshot.forEach((d) => cats.push({ id: d.id, ...d.data() }));
-                cats.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-                globalCategoriesData = cats;
-                renderCustomCategories();
-            }, (error) => {
-                console.error("카테고리 동기화 에러:", error);
-            });
-        }
-
-        function renderCustomCategories() {
-            customCategoryContainer.innerHTML = '';
-            globalCategoriesData.forEach(cat => {
-                const btn = document.createElement('button');
-                btn.className = 'category-btn border border-gray-300 px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors';
-                btn.dataset.category = cat.label;
-                btn.textContent = cat.label;
-                btn.addEventListener('click', (e) => selectCategoryBtn(e.currentTarget));
-                customCategoryContainer.appendChild(btn);
             });
         }
 
@@ -747,8 +701,6 @@
                 actionInput.value = '';
                 regretDetailInput.value = '';
                 authorNameInput.value = '';
-                newCategoryInputWrap.classList.add('hidden');
-                newCategoryInput.value = '';
                 authorNameInput.focus();
             });
 
@@ -772,42 +724,6 @@
                     target.classList.add('active');
                     selectedRole = target.dataset.role;
                 });
-            });
-
-            addCategoryBtn.addEventListener('click', () => {
-                if (isDeadlinePassed()) {
-                    showToast('작성 가능한 시간이 지났습니다.', 'warning');
-                    return;
-                }
-                newCategoryInputWrap.classList.toggle('hidden');
-                newCategoryInput.focus();
-            });
-
-            confirmAddCategoryBtn.addEventListener('click', async () => {
-                const label = newCategoryInput.value.trim();
-                if (!label) {
-                    showToast('추가할 후회 유형을 입력해주세요.', 'warning');
-                    return;
-                }
-                if (containsBadWord(label)) {
-                    showToast('적절하지 않은 표현이 포함되어 있어요. 다시 입력해주세요.', 'error');
-                    return;
-                }
-                const exists = globalCategoriesData.some(c => c.label === label) ||
-                    Array.from(categoryBtnsContainer.querySelectorAll('.category-btn')).some(b => b.dataset.category === label);
-                if (exists) {
-                    showToast('이미 같은 후회 유형이 있어요.', 'warning');
-                    return;
-                }
-                try {
-                    await addDoc(categoriesCollectionRef, { label, createdAt: Date.now() });
-                    newCategoryInput.value = '';
-                    newCategoryInputWrap.classList.add('hidden');
-                    showToast('새로운 후회 유형이 추가되었습니다!', 'success');
-                } catch (error) {
-                    console.error('카테고리 추가 실패:', error);
-                    showToast('추가에 실패했습니다. 다시 시도해주세요.', 'error');
-                }
             });
 
             submitMemoBtn.addEventListener('click', async () => {
