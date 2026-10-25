@@ -155,12 +155,6 @@
             100% { transform: rotate(360deg); }
         }
 
-        .locked-btn {
-            opacity: 0.5;
-            cursor: not-allowed !important;
-            filter: grayscale(0.6);
-        }
-
         .status-panel {
             max-height: 70vh;
             overflow-y: auto;
@@ -201,7 +195,6 @@
                 우리가족 행복 프로젝트
             </h1>
             <p class="text-sm md:text-base mt-1 opacity-90 text-gray-800">우리가 함께 만드는 후회 없는 내일 (실시간 공유중)</p>
-            <p id="deadlineNotice" class="text-xs md:text-sm mt-1 font-bold text-gray-800 bg-white bg-opacity-40 inline-block px-2 py-0.5 rounded-full"></p>
         </div>
         <div class="flex items-center gap-2">
             <button id="statusBtn" class="bg-white text-purple-600 hover:bg-purple-50 font-bold py-2 px-3 md:px-4 rounded-full shadow-md transition-colors flex items-center gap-2 text-xs md:text-base whitespace-nowrap">
@@ -409,9 +402,6 @@
 
         const COLLECTION_PATH = "family_memos";
 
-        // 작성 마감 시각: 한국시간(KST, UTC+9) 2026-10-26 11:00 = UTC 2026-10-26 02:00
-        const DEADLINE_MS = new Date('2026-10-26T02:00:00Z').getTime();
-
         // 교사 전체 초기화 비밀번호
         const RESET_PASSWORD = '2026';
 
@@ -450,7 +440,6 @@
         const toastMessage = document.getElementById('toastMessage');
         const toastText = document.getElementById('toastText');
         const toastIcon = document.getElementById('toastIcon');
-        const deadlineNotice = document.getElementById('deadlineNotice');
 
         const presentationModal = document.getElementById('presentationModal');
         const presentationTitle = document.getElementById('presentationTitle');
@@ -513,29 +502,6 @@
         function isOwnMemo(id) {
             return getMyMemoIds().includes(id);
         }
-
-        function isDeadlinePassed() {
-            return Date.now() >= DEADLINE_MS;
-        }
-
-        function formatDeadline() {
-            return '2026년 10월 26일(월) 오전 11시';
-        }
-
-        function updateLockUI() {
-            const locked = isDeadlinePassed();
-            if (locked) {
-                deadlineNotice.innerHTML = '<i class="fa-solid fa-lock mr-1"></i>작성이 마감되었습니다 (' + formatDeadline() + ')';
-                addMemoBtn.classList.add('locked-btn');
-                addMemoBtn.disabled = true;
-            } else {
-                deadlineNotice.innerHTML = '<i class="fa-solid fa-clock mr-1"></i>작성 가능 기간: ' + formatDeadline() + '까지';
-                addMemoBtn.classList.remove('locked-btn');
-                addMemoBtn.disabled = false;
-            }
-        }
-        updateLockUI();
-        setInterval(updateLockUI, 15000);
 
         async function initFirebase() {
             try {
@@ -834,10 +800,6 @@
 
         function setupUIEvents() {
             addMemoBtn.addEventListener('click', () => {
-                if (isDeadlinePassed()) {
-                    showToast('작성 가능한 시간이 지났습니다.', 'warning');
-                    return;
-                }
                 if (!auth?.currentUser) {
                     showToast('아직 서버에 연결되지 않았습니다. 잠시 후 다시 시도해주세요.', 'error');
                     return;
@@ -869,11 +831,6 @@
 
             submitMemoBtn.addEventListener('click', async () => {
                 const isEditing = !!editingMemoId;
-
-                if (!isEditing && isDeadlinePassed()) {
-                    showToast('작성 가능한 시간이 지났습니다.', 'warning');
-                    return;
-                }
 
                 const actionText = actionInput.value.trim();
                 const regretDetail = regretDetailInput.value.trim();
