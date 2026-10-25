@@ -687,8 +687,11 @@
                     '</div>';
             }
 
+            // 발표 대기중 보드에 있고, 아직 발표(후회 버리기) 전인 내 포스트잇만 수정/삭제 가능
+            const canEdit = boardId === 'waitingBoard' && !data.discarded && isOwnMemo(data.id);
+
             let actionsHTML = '';
-            if (isOwnMemo(data.id)) {
+            if (canEdit) {
                 actionsHTML = '<div class="memo-actions">' +
                     '<button type="button" class="memo-edit-btn" title="수정"><i class="fa-solid fa-pen"></i></button>' +
                     '<button type="button" class="memo-delete-btn" title="삭제"><i class="fa-solid fa-trash"></i></button>' +
@@ -709,7 +712,7 @@
                 openPresentation(data.authorName);
             });
 
-            if (isOwnMemo(data.id)) {
+            if (canEdit) {
                 const editBtn = card.querySelector('.memo-edit-btn');
                 const deleteBtn = card.querySelector('.memo-delete-btn');
                 editBtn.addEventListener('click', (e) => {
